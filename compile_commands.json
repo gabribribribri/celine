@@ -1,0 +1,6 @@
+[
+{
+  "directory": "/home/gaybe/doc/dev/c++/celine",
+  "arguments": ["/usr/bin/clang++", "-c", "-Qunused-arguments", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-std=c++23", "-stdlib=libc++", "-DNDEBUG", "-o", "build/.objs/celine/linux/x86_64/release/src/main.cpp.o", "src/main.cpp"],
+  "file": "src/main.cpp"
+}]
