@@ -131,10 +131,10 @@ int main() {
 
     // Input vector (1, 1, 1, 1)
     std::array<double, 4> vec = { 1.0, 1.0, 1.0, 1.0 };
-    auto res = f(vec);
+    std::array<double, 2> res = f(vec);
 
     std::println("\nf(1, 1, 1, 1) = ({}, {})", res[0], res[1]);
-    // Expected: (6+7+1) = 14, (-4+2+1) = -1
+    // Expected: (14, -1)
 
     return 0;
 }
