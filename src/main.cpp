@@ -55,6 +55,7 @@ struct Term {
             row.terms.resize(term.index);
         }
         row.terms.at(term.index) += term.coeff;
+        return row;
     }
 };
 
@@ -122,8 +123,8 @@ public:
 int main() {
     // f: R^4 -> R^2
     LinearApp<4, 2> f {
-        6. * X + 7. * Y + Z,
-        -4. * Y + 2. * Z + T
+        6. * X + 7. * Y + 1. *Z,
+        -4. * Y + 2. * Z + 1. * T
     };
 
     std::println("Transformation Matrix :");
