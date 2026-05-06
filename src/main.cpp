@@ -3,67 +3,62 @@
 #include <print>
 #include <vector>
 
+struct VectorTerm;
+
 // 2. A collection of terms (e.g., 6*x + 7*y)
 struct ImageRow {
     std::vector<double> terms;
 
-    ImageRow() = default;
-    ImageRow(std::vector<double>&& row) : terms(std::move(row)) {}
+    constexpr ImageRow() = default;
+    constexpr ImageRow(VectorTerm term);
+    constexpr ImageRow(std::vector<double>&& row) : terms(std::move(row)) {}
 
-    friend ImageRow operator+(ImageRow a, ImageRow const& b) {
-        for (double t : b.terms) {
-            a.terms.push_back(t);
+    friend constexpr ImageRow operator+(ImageRow a, ImageRow const& b) {
+        size_t i = 0;
+        for (double bt : b.terms) {
+            if (i >= a.terms.size()) {
+                a.terms.push_back(bt);
+            } else {
+                a.terms.at(i) += bt;
+            }
+            ++i;
         }
         return a;
     }
 
-    friend ImageRow operator-(ImageRow a, ImageRow const& b) {
-        for (double t : b.terms) {
-            a.terms.push_back(-t);
-        }
-        return a;
-    }
+    friend constexpr ImageRow operator-(ImageRow a, ImageRow const& b) {}
+        
 
-    friend ImageRow operator-(ImageRow a) {
-        for (double& term : a.terms) {
-            term *= -1;
-        }
-        return a;
-    }
+    // friend ImageRow operator-(ImageRow a) {
 
-    friend constexpr ImageRow operator*(double scalar, ImageRow a) noexcept {
-        for (double& t : a.terms) {
-            t *= scalar;
-        }
-        return a;
-    }
 };
 
 // 1. A single term in a linear combination (e.g., 6.0 * x_1)
-struct Term {
+struct VectorTerm {
     size_t index;
     double coeff;
 
-    friend constexpr ImageRow operator*(const double coeff, const Term term) noexcept {
-        std::vector<double> out_row(term.index);
+    friend constexpr ImageRow operator*(const double coeff, const VectorTerm term) noexcept {
+        std::vector<double> out_row(term.index + 1);
         out_row.back() = term.coeff * coeff;
-        return std::move(out_row);
+        return out_row;
     }
 
-    friend constexpr ImageRow operator+(ImageRow row, const Term term) noexcept {
-        if (row.terms.size() < term.index) {
-            row.terms.resize(term.index);
-        }
-        row.terms.at(term.index) += term.coeff;
-        return row;
+    friend constexpr ImageRow operator*(const VectorTerm term, const double coeff) noexcept {
+        return coeff * term;
     }
+
 };
 
+constexpr ImageRow::ImageRow(VectorTerm term) : terms(term.index+1) {
+    terms.back() = term.coeff;
+}
+
 // Define global proxies
-static constexpr Term X { .index = 0, .coeff = 1 };
-static constexpr Term Y { .index = 1, .coeff = 1 };
-static constexpr Term Z { .index = 2, .coeff = 1 };
-static constexpr Term T { .index = 3, .coeff = 1 };
+static constexpr VectorTerm X { .index = 0, .coeff = 1 };
+static constexpr VectorTerm Y { .index = 1, .coeff = 1 };
+static constexpr VectorTerm Z { .index = 2, .coeff = 1 };
+static constexpr VectorTerm T { .index = 3, .coeff = 1 };
 
 // 4. The Main Class
 template <size_t InDim, size_t OutDim>
@@ -78,7 +73,7 @@ private:
 
 public:
     // { 6*X + 7*Y, ... } syntax
-    LinearApp(std::initializer_list<ImageRow> exprs) {
+    constexpr LinearApp(std::initializer_list<ImageRow> exprs) {
         // TODO use enumerate instead of ugly floaty variables
         size_t row = 0;
         for (ImageRow const& e : exprs) {
@@ -97,7 +92,7 @@ public:
         }
     }
 
-    std::array<double, OutDim> operator()(std::array<double, InDim> const& in_vec) const {
+    constexpr std::array<double, OutDim> operator()(std::array<double, InDim> const& in_vec) const {
         std::array<double, OutDim> out_vec {};
         for (size_t i = 0; i < OutDim; ++i) {
             for (size_t j = 0; j < InDim; ++j) {
@@ -107,7 +102,7 @@ public:
         return out_vec;
     }
 
-    void print_matrix() const {
+    constexpr void print_matrix() const {
         for (size_t i = 0; i < OutDim; ++i) {
             std::print("[ ");
             for (size_t j = 0; j < InDim; ++j) {
@@ -121,18 +116,30 @@ public:
 // --- Test Case ---
 
 int main() {
-    // f: R^4 -> R^2
-    LinearApp<4, 2> f {
-        6. * X + 7. * Y + 1. *Z,
-        -4. * Y + 2. * Z + 1. * T
+
+    // f1: R^4 -> R^2
+    LinearApp<3, 1> f1 {
+        X + 10.0 * Y + 100.0 * Z
     };
 
-    std::println("Transformation Matrix :");
-    f.print_matrix();
+    std::array<double, 3> u { { 2.0, 3.0, 4.0 } };
+    std::println("f({}) = {}", u, f1(u));
+
+    std::println("Transformation Matrix of f1 :");
+    f1.print_matrix();
+
+    // f2: R^4 -> R^2
+    LinearApp<4, 2> f2 {
+        6. * X + 7. * Y + Z,
+        -4. * Y + 2. * Z + T
+    };
+
+    std::println("Transformation Matrix of f2 :");
+    f2.print_matrix();
 
     // Input vector (1, 1, 1, 1)
     std::array<double, 4> vec = { 1.0, 1.0, 1.0, 1.0 };
-    std::array<double, 2> res = f(vec);
+    std::array<double, 2> res = f2(vec);
 
     std::println("\nf(1, 1, 1, 1) = ({}, {})", res[0], res[1]);
     // Expected: (14, -1)
