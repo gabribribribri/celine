@@ -1,6 +1,16 @@
 [
 {
-  "directory": "/home/gaybe/doc/dev/c++/celine",
-  "arguments": ["/usr/bin/clang++", "-c", "-Qunused-arguments", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-std=c++23", "-stdlib=libc++", "-DNDEBUG", "-o", "build/.objs/celine/linux/x86_64/release/src/main.cpp.o", "src/main.cpp"],
+  "directory": "/home/gaybe/Documents/dev/cpp/celine",
+  "arguments": ["/usr/bin/clang++", "-c", "-Qunused-arguments", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-std=c++23", "-stdlib=libc++", "-DNDEBUG", "-x", "c++-module", "--precompile", "-o", "build/.gens/celine/linux/x86_64/release/rules/bmi/cache/interfaces/7c2398787b483a90/LinearApp.pcm", "src/LinearApp.cppm"],
+  "file": "src/LinearApp.cppm"
+},
+{
+  "directory": "/home/gaybe/Documents/dev/cpp/celine",
+  "arguments": ["/usr/bin/clang++", "-c", "-Qunused-arguments", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-std=c++23", "-stdlib=libc++", "-DNDEBUG", "-o", "build/.objs/celine/linux/x86_64/release/src/LinearApp.cppm.o", "src/LinearApp.cppm"],
+  "file": "src/LinearApp.cppm"
+},
+{
+  "directory": "/home/gaybe/Documents/dev/cpp/celine",
+  "arguments": ["/usr/bin/clang++", "-c", "-Qunused-arguments", "-m64", "-fvisibility=hidden", "-fvisibility-inlines-hidden", "-O3", "-std=c++23", "-stdlib=libc++", "-DNDEBUG", "-fmodule-file=LinearApp=build/.gens/celine/linux/x86_64/release/rules/bmi/cache/interfaces/7c2398787b483a90/LinearApp.pcm", "-o", "build/.objs/celine/linux/x86_64/release/src/main.cpp.o", "src/main.cpp"],
   "file": "src/main.cpp"
 }]

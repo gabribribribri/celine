@@ -1,0 +1,5 @@
+CompileFlags :
+  Add: 
+    - "-std=c++20"
+    - "-stdlib=libc++"
+    - "-fprebuilt-module-path=build/.objs/celine_lib/linux/x86_64/release/src/celine/celine.cppm.o" ] 
