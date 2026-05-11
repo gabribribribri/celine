@@ -5,22 +5,16 @@ set_policy("build.c++.modules.std", false)
 
 target("celine_lib")
     set_kind("$(kind)")
-    -- set_kind("static")
-    add_files("src/celine/*.cppm", {public = true})
-    -- add_files("src/celine/celine.cppm", {public = true})
-    -- add_files("src/celine/LinearApp.cppm", {public = true})
+    add_files("src/celine/*.cppm", {public = true}) -- {public = true} was the problem
     -- add_includedirs("src/celine", {public = true})
-    -- add_files("src/celine/*.cpp")
 
     set_toolchains("clang")
     add_cxflags("-stdlib=libc++")
     add_ldflags("-stdlib=libc++")
 
-    -- add_cxflags("-std=c++20")
     -- after_build(function (target)
     --     import("devel.debugger").generate_compile_commnands()
     -- end)
-    -- set_module_providers({
 
 
 target("celine_bin")
@@ -32,7 +26,6 @@ target("celine_bin")
     add_cxflags("-stdlib=libc++")
     add_ldflags("-stdlib=libc++")
 
-    -- add_cxflags("-std=c++20")
 
 target("celine_tests")
     set_kind("binary") -- No building when just `xmake`

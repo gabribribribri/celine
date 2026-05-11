@@ -3,6 +3,6 @@
 
 import celine;
 
-TEST_CASE("testing something") {
-  CHECK(LinearApp::something() == 42);
+TEST_CASE("testing the funniest number") {
+  CHECK(TestNotBroken::the_funniest_number() == 67);
 }
