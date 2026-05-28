@@ -1,6 +1,9 @@
 module;
 
+#include <array>
+#include <initializer_list>
 #include <print>
+#include <utility>
 
 export module celine:LinearApp;
 
@@ -29,7 +32,14 @@ private:
     Matrix<OutDim, InDim> mat;
 
 public:
-    constexpr LinearApp(Matrix<OutDim, InDim> matrix) : mat(matrix) {}
+    // shut up clang you can't hold my genius
+    constexpr LinearApp(double (&&raw)[OutDim][InDim]) {  // NOLINT
+        for (size_t i = 0; i < OutDim; ++i) {
+            for (size_t j = 0; j < InDim; ++j) {
+                mat[i][j] = raw[i][j];
+            }
+        }
+    }
 
     constexpr Vector<OutDim> operator()(Vector<InDim> const& in_vec) const noexcept {
         Vector<OutDim> out_vec;
@@ -41,6 +51,18 @@ public:
             out_vec.at(i) = term;
         }
 
+        return out_vec;
+    }
+
+    template <typename... Args>
+        requires(sizeof...(Args) == InDim) && (std::same_as<double, Args> && ...)
+    constexpr Vector<OutDim> operator()(Args... in_vec) const noexcept {
+        Vector<OutDim> out_vec;
+        for (size_t i = 0; i < OutDim; ++i) {
+            out_vec[i] = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+                return ((mat[i][Is] * in_vec) + ... + 0.0);
+            }(std::make_index_sequence<InDim>());
+        }
         return out_vec;
     }
 
