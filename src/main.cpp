@@ -4,7 +4,7 @@
 import celine;
 
 int main() {
-    LinearApp f {
+    constexpr LinearApp f {
         {
             { 2, 3, 4 },     //
             { 10, 20, 30 },  //
@@ -16,5 +16,15 @@ int main() {
     std::println("{}", f(v));
     std::println("{}", f(1., 1., 1.));
 
+
+    constexpr LinearApp g {
+        {
+        {1,2,3,4,5},
+        {10, 20, 30, 40, 50},
+        {100, 200, 300, 400, 500},
+    }
+    };
+
+    std::println("{}", g(0., 1., 0., 1., 1.));
 
 }

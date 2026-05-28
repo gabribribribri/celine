@@ -4,6 +4,7 @@ module;
 #include <initializer_list>
 #include <print>
 #include <utility>
+#include <ranges>
 
 export module celine:LinearApp;
 
@@ -58,8 +59,8 @@ public:
         requires(sizeof...(Args) == InDim) && (std::same_as<double, Args> && ...)
     constexpr Vector<OutDim> operator()(Args... in_vec) const noexcept {
         Vector<OutDim> out_vec;
-        for (size_t i = 0; i < OutDim; ++i) {
-            out_vec[i] = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
+        for (std::size_t i = 0; auto& row : mat) {
+            out_vec[i++] = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
                 return ((mat[i][Is] * in_vec) + ... + 0.0);
             }(std::make_index_sequence<InDim>());
         }
