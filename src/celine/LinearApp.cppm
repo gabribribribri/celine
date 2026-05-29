@@ -3,8 +3,8 @@ module;
 #include <array>
 #include <initializer_list>
 #include <print>
-#include <utility>
 #include <ranges>
+#include <utility>
 
 export module celine:LinearApp;
 
@@ -66,9 +66,42 @@ public:
         }
         return out_vec;
     }
-
-    // something like that
-    // template<LinearApp<InDim, 1>... Bzzz>
-    // constexpr LinearApp(Bzzz... bzzz) {
-    // }
 };
+
+export template <std::size_t InDim>
+using LinearForm = LinearApp<InDim, 1>;
+
+// Linear Form template specialization
+// export template <std::size_t InDim>
+// class LinearApp<InDim, 1> {
+//     constexpr LinearApp(double (&&row)[InDim]) {  // NOLINT
+//         for (size_t j = 0; j < InDim; ++j) {
+//             mat[0][j] = raw[j];
+//         }
+//     }
+// };
+
+export template <std::size_t InDim>
+LinearApp<InDim, 1>::LinearApp(double (&&row)[InDim]) {
+    for (size_t j = 0; j < InDim; ++j) {
+        mat[0][j] = raw[j];
+    }
+}
+
+export template <std::size_t FirstSize, std::size_t SecondSize, size_t RetSize = std::max(FirstSize, SecondSize)>
+constexpr LinearForm<RetSize> operator+(LinearForm<FirstSize> const& a, LinearForm<SecondSize> const& b) noexcept {
+    return [=]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return LinearForm<RetSize> { (
+            (Is < FirstSize ? a[0][Is] : 0.0) +
+            (Is < SecondSize ? b[0][Is] : 0.0))... };
+    };
+}
+
+template <size_t FirstSize, size_t SecondSize, size_t RetSize = std::max(FirstSize, SecondSize)>
+constexpr Vector<RetSize> sum_arrays(Vector<FirstSize> const& a, Vector<SecondSize> const& b) {
+    return [=]<size_t... Is>(std::index_sequence<Is...>) {
+        return Vector<RetSize> { (
+            (Is < FirstSize ? a[Is] : 0.0) +
+            (Is < SecondSize ? b[Is] : 0.0))... };
+    }(std::make_index_sequence<RetSize>());
+}

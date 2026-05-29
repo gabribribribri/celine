@@ -16,7 +16,6 @@ int main() {
     std::println("{}", f(v));
     std::println("{}", f(1., 1., 1.));
 
-
     constexpr LinearApp g {
         {
         {1,2,3,4,5},
@@ -27,4 +26,6 @@ int main() {
 
     std::println("{}", g(0., 1., 0., 1., 1.));
 
+
+    constexpr LinearApp f1 {{{1., 2., 3., 4., 5.}}};
 }
