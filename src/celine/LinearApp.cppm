@@ -1,9 +1,9 @@
 module;
 
+#include <algorithm>
 #include <array>
-#include <initializer_list>
+#include <format>
 #include <print>
-#include <ranges>
 #include <utility>
 
 export module celine:LinearApp;
@@ -28,18 +28,25 @@ using Vector = std::array<double, Dim>;
 
 export template <std::size_t InDim, std::size_t OutDim>
 class LinearApp {
-private:
+public:
     // c'est définitivement comme ça la meilleure manière de stocker mat !
     Matrix<OutDim, InDim> mat;
 
-public:
+    constexpr LinearApp() noexcept = default;
+
     // shut up clang you can't hold my genius
-    constexpr LinearApp(double (&&raw)[OutDim][InDim]) {  // NOLINT
+    constexpr LinearApp(double (&&raw)[OutDim][InDim]) noexcept {  // NOLINT
         for (size_t i = 0; i < OutDim; ++i) {
             for (size_t j = 0; j < InDim; ++j) {
                 mat[i][j] = raw[i][j];
             }
         }
+    }
+
+    static constexpr LinearApp with_last(double val) noexcept {
+        LinearApp app {};
+        app.mat.back().back() = val;
+        return app;
     }
 
     constexpr Vector<OutDim> operator()(Vector<InDim> const& in_vec) const noexcept {
@@ -66,42 +73,107 @@ public:
         }
         return out_vec;
     }
+
+    friend constexpr LinearApp operator+(LinearApp const& lhs, LinearApp const& rhs) noexcept {
+        LinearApp new_app = lhs;
+        for (std::size_t i = 0; auto& vec : rhs.mat) {
+            for (std::size_t j = 0; auto val : vec) {
+                new_app.mat[i][j++] += val;
+            }
+            i++;
+        }
+        return new_app;
+    }
+
+    friend constexpr LinearApp operator-(LinearApp const& app) noexcept {
+        LinearApp new_app = app;
+        for (auto& vec : new_app.mat) {
+            for (auto& val : vec) {
+                val *= -1;
+            }
+        }
+        return new_app;
+    }
+
+    friend constexpr LinearApp operator-(LinearApp const& lhs, LinearApp const& rhs) noexcept {
+        return lhs + (-rhs);
+    }
+
+    friend constexpr LinearApp operator*(double coef, LinearApp const& app) noexcept {
+        LinearApp new_app;
+        for (std::size_t i = 0; auto& vec : app.mat) {
+            for (std::size_t j = 0; auto val : vec) {
+                new_app.mat[i++][j++] = coef * val;
+            }
+        }
+        return new_app;
+    }
+
+    friend constexpr LinearApp operator*(LinearApp const& app, double coef) noexcept {
+        return coef * app;
+    }
+
+    friend constexpr LinearApp operator/(LinearApp const& app, double coef) noexcept {
+        return (1/coef) * app;
+    }
 };
 
-export template <std::size_t InDim>
-using LinearForm = LinearApp<InDim, 1>;
-
-// Linear Form template specialization
-// export template <std::size_t InDim>
-// class LinearApp<InDim, 1> {
-//     constexpr LinearApp(double (&&row)[InDim]) {  // NOLINT
-//         for (size_t j = 0; j < InDim; ++j) {
-//             mat[0][j] = raw[j];
-//         }
-//     }
-// };
-
-export template <std::size_t InDim>
-LinearApp<InDim, 1>::LinearApp(double (&&row)[InDim]) {
-    for (size_t j = 0; j < InDim; ++j) {
-        mat[0][j] = raw[j];
-    }
+export template <std::size_t FirstSize, std::size_t SecondSize, size_t RetSize = std::max(FirstSize, SecondSize)>
+constexpr LinearApp<RetSize, 1> operator+(LinearApp<FirstSize, 1> const& lhs, LinearApp<SecondSize, 1> const& rhs) noexcept {
+    return [=]<std::size_t... Is>(std::index_sequence<Is...>) {
+        return LinearApp<RetSize, 1> { { { (
+            (Is < FirstSize ? lhs.mat[0][Is] : 0.0) +
+            (Is < SecondSize ? rhs.mat[0][Is] : 0.0))... } } };
+    }(std::make_index_sequence<RetSize>());
 }
 
 export template <std::size_t FirstSize, std::size_t SecondSize, size_t RetSize = std::max(FirstSize, SecondSize)>
-constexpr LinearForm<RetSize> operator+(LinearForm<FirstSize> const& a, LinearForm<SecondSize> const& b) noexcept {
+constexpr LinearApp<RetSize, 1> operator-(LinearApp<FirstSize, 1> const& lhs, LinearApp<SecondSize, 1> const& rhs) noexcept {
     return [=]<std::size_t... Is>(std::index_sequence<Is...>) {
-        return LinearForm<RetSize> { (
-            (Is < FirstSize ? a[0][Is] : 0.0) +
-            (Is < SecondSize ? b[0][Is] : 0.0))... };
-    };
-}
-
-template <size_t FirstSize, size_t SecondSize, size_t RetSize = std::max(FirstSize, SecondSize)>
-constexpr Vector<RetSize> sum_arrays(Vector<FirstSize> const& a, Vector<SecondSize> const& b) {
-    return [=]<size_t... Is>(std::index_sequence<Is...>) {
-        return Vector<RetSize> { (
-            (Is < FirstSize ? a[Is] : 0.0) +
-            (Is < SecondSize ? b[Is] : 0.0))... };
+        return LinearApp<RetSize, 1> { { { (
+            (Is < FirstSize ? lhs.mat[0][Is] : 0.0) -
+            (Is < SecondSize ? rhs.mat[0][Is] : 0.0))... } } };
     }(std::make_index_sequence<RetSize>());
 }
+
+
+export inline constexpr LinearApp X = LinearApp<1, 1>::with_last(1.0);
+export inline constexpr LinearApp Y = LinearApp<2, 1>::with_last(1.0);
+export inline constexpr LinearApp Z = LinearApp<3, 1>::with_last(1.0);
+export inline constexpr LinearApp T = LinearApp<4, 1>::with_last(1.0);
+
+template <std::size_t InDim, size_t OutDim>
+struct std::formatter<LinearApp<InDim, OutDim>> {
+    constexpr auto parse(std::format_parse_context& ctx) {
+        return ctx.begin();
+    }
+
+    auto format(LinearApp<InDim, OutDim> const& app, std::format_context& ctx) const {
+        std::string result = std::format("LinearApp : {} -> {}\n", InDim, OutDim);
+        for (size_t i = 0; i < OutDim; ++i) {
+            if (OutDim == 1) {
+                result += "[  ";
+            } else if (i == 0) {
+                result += "┏  ";
+            } else if (i + 1 == OutDim) {
+                result += "┗  ";
+            } else {
+                result += "┃  ";
+            }
+            for (size_t j = 0; j < InDim; ++j) {
+                result += std::format("{}", app.mat[i][j]) + (j == InDim - 1 ? "" : "\t");
+            }
+
+            if (OutDim == 1) {
+                result += "\t]\n";
+            } else if (i == 0) {
+                result += "\t┓\n";
+            } else if (i + 1 == OutDim) {
+                result += "\t┛\n";
+            } else {
+                result += "\t┃\n";
+            }
+        }
+        return std::format_to(ctx.out(), "{}", result);
+    }
+};
