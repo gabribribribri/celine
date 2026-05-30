@@ -27,22 +27,25 @@ int main() {
         }
     };
 
+    constexpr LinearForm b = 56 * Z + X * 0.4;
+
     LinearApp<3, 3> h {
         X + Y + Z,
-        X - Y,
-        X + 2 * Y + Z,
-
+        b,
+        X - Z + 2 * Y,
     };
 
     std::println("{}", h);
 
-    // std::println("{}\n{}", f, g);
-    // std::println("bonsoir");
-    // std::println("+ :{}\n", exp);
-    // std::println("-2 :{}\n", f - g);
-    // std::println("-1 :{}\n", -g);
-    // std::println("* :{}\n", 11. * g);
-    // std::println("/ :{}\n", g / 3.);
-    // std::println("lots :{}\n", 6 * g - 0.67 * f + 0.00011 * g);
-    // std::println("base :{}\n", 6. * X - Y * 7. + 0.11 * Z + T);
+    std::println("{}\n{}", f, g);
+    std::println("bonsoir");
+    std::println("+ :{}\n", f + g);
+    std::println("-2 :{}\n", f - g);
+    std::println("-1 :{}\n", -g);
+    std::println("* :{}\n", 11. * g);
+    std::println("/ :{}\n", g / 3.);
+    std::println("lots :{}\n", 6 * g - 0.67 * f + 0.00011 * h);
+    std::println("base :{}\n", 6. * X - Y * 7. + 0.11 * Z + T);
+
+    std::println("{}", b);
 }

@@ -35,6 +35,8 @@ public:
 
     constexpr LinearApp() noexcept : mat {} {};
 
+    /// CONSTRUCTORS ///
+
     // ugly but here for inline construction
     constexpr LinearApp(double const (&raw)[OutDim][InDim]) noexcept {  // NOLINT
         for (size_t out = 0; out < OutDim; ++out) {
@@ -42,19 +44,24 @@ public:
                 mat[out][in] = raw[out][in];
             }
         }
+        // unfortunatly doesn't work in constexpr
         // std::copy(raw.begin(), raw.end(), mat.begin());
     }
 
+    // initialization directly from another matrix
     constexpr LinearApp(Matrix<OutDim, InDim> const& other_mat) : mat { other_mat } {}
 
-    static constexpr LinearApp with_last(double val) noexcept
-        requires(InDim >= 1 && OutDim >= 1)
+    // creates a placeholder by only setting
+    // the last value of the linear application
+    static constexpr LinearApp placeholder() noexcept
+        requires(InDim >= 1 && OutDim == 1)
     {
         LinearApp app {};
-        app.mat.back().back() = val;
+        app.mat[0].back() = 1.0;
         return app;
     }
 
+    // magic constructor for natural expressions
     template <std::size_t... LinesInDims>
         requires((LinesInDims <= InDim) && ...) && (sizeof...(LinesInDims) == OutDim)
     constexpr LinearApp(LinearApp<LinesInDims, 1> const&... lines) noexcept : mat {} {  // NOLINT
@@ -69,6 +76,8 @@ public:
         }(),
          ...);
     }
+
+    /// OPERATORS ///
 
     constexpr Vector<OutDim> operator()(Vector<InDim> const& in_vec) const noexcept {
         Vector<OutDim> out_vec;
@@ -116,7 +125,7 @@ public:
         return *this;
     }
 
-    // passed lhs by value to enable move semantics and optimizations 
+    // passed lhs by value to enable move semantics and optimizations
     friend constexpr LinearApp operator+(LinearApp lhs, LinearApp const& rhs) noexcept {
         lhs += rhs;
         return lhs;
@@ -143,7 +152,7 @@ public:
     }
 
     friend constexpr LinearApp operator/(LinearApp app, double coef) noexcept {
-        app *= (1./coef);
+        app *= (1. / coef);
         return app;
     }
 };
@@ -167,10 +176,13 @@ constexpr LinearApp<RetInDim, 1> operator-(LinearApp<FirstInDim, 1> const& lhs, 
     }(std::make_index_sequence<RetInDim>());
 }
 
-export inline constexpr LinearApp X = LinearApp<1, 1>::with_last(1.0);
-export inline constexpr LinearApp Y = LinearApp<2, 1>::with_last(1.0);
-export inline constexpr LinearApp Z = LinearApp<3, 1>::with_last(1.0);
-export inline constexpr LinearApp T = LinearApp<4, 1>::with_last(1.0);
+export template <size_t Dim>
+using LinearForm = LinearApp<Dim, 1>;
+
+export inline constexpr LinearApp X = LinearForm<1>::placeholder();
+export inline constexpr LinearApp Y = LinearForm<2>::placeholder();
+export inline constexpr LinearApp Z = LinearForm<3>::placeholder();
+export inline constexpr LinearApp T = LinearForm<4>::placeholder();
 
 // Formatting stuff
 template <std::size_t InDim, size_t OutDim>
@@ -180,7 +192,7 @@ struct std::formatter<LinearApp<InDim, OutDim>> {
     }
 
     constexpr auto format(LinearApp<InDim, OutDim> const& app, std::format_context& ctx) const {
-        std::string result = std::format("LinearApp : {} -> {}\n", InDim, OutDim);
+        std::string result = "\n";
         for (size_t i = 0; i < OutDim; ++i) {
             if (OutDim == 1) {
                 result += "[  ";
