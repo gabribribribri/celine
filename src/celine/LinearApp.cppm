@@ -77,6 +77,28 @@ public:
          ...);
     }
 
+    /// MEMBER FUNCTIONS ///
+
+    [[nodiscard]] constexpr bool projector() const noexcept
+        requires(InDim == OutDim)
+    {
+        LinearApp sq {};
+        // ikj loop to satify cache locality because mat is row-major
+        for (size_t i = 0; i < InDim; ++i) {
+            for (size_t k = 0; k < InDim; ++k) {
+                double scalar = mat[i][k];
+                for (size_t j = 0; j < InDim; ++j) {
+                    sq.mat[i][j] += scalar * mat[k][j];
+                }
+            }
+        }
+        return sq == mat;
+    }
+
+    [[nodiscard]] constexpr bool surjective() const noexcept;
+    [[nodiscard]] constexpr bool injective() const noexcept;
+    [[nodiscard]] constexpr bool bijective() const noexcept;
+
     /// OPERATORS ///
 
     constexpr Vector<OutDim> operator()(Vector<InDim> const& in_vec) const noexcept {
