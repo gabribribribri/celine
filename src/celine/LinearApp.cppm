@@ -2,6 +2,8 @@ module;
 
 #include <algorithm>
 #include <array>
+#include <concepts>
+#include <cstddef>
 #include <format>
 #include <print>
 #include <utility>
@@ -32,21 +34,41 @@ public:
     // c'est définitivement comme ça la meilleure manière de stocker mat !
     Matrix<OutDim, InDim> mat;
 
-    constexpr LinearApp() noexcept = default;
+    constexpr LinearApp() noexcept : mat {} {};
 
-    // shut up clang you can't hold my genius
-    constexpr LinearApp(double (&&raw)[OutDim][InDim]) noexcept {  // NOLINT
+    // ugly but here for inline construction
+    constexpr LinearApp(double const (&raw)[OutDim][InDim]) noexcept {  // NOLINT
         for (size_t i = 0; i < OutDim; ++i) {
             for (size_t j = 0; j < InDim; ++j) {
                 mat[i][j] = raw[i][j];
             }
         }
+        // std::copy(raw.begin(), raw.end(), mat.begin());
     }
 
-    static constexpr LinearApp with_last(double val) noexcept {
+    constexpr LinearApp(Matrix<OutDim, InDim> const& other_mat) : mat { other_mat } {}
+
+    static constexpr LinearApp with_last(double val) noexcept
+        requires(InDim >= 1 && OutDim >= 1)
+    {
         LinearApp app {};
         app.mat.back().back() = val;
         return app;
+    }
+
+    template <std::size_t... LinesInDims>
+        requires((LinesInDims <= InDim) && ...) && (sizeof...(LinesInDims) == OutDim)
+    constexpr LinearApp(LinearApp<LinesInDims, 1> const&... lines) noexcept : mat {} {  // NOLINT
+        // I know state mutating fold expressions in lambdas is an anti-pattern
+        // I just don't care because the alternatives are damn ugly
+        int i = 0;
+        ([&, this] {
+            for (size_t j = 0; j < LinesInDims; ++j) {
+                mat[i][j] = lines.mat[0][j];
+            }
+            i++;
+        }(),
+         ...);
     }
 
     constexpr Vector<OutDim> operator()(Vector<InDim> const& in_vec) const noexcept {
@@ -54,7 +76,7 @@ public:
         for (size_t i = 0; i < OutDim; ++i) {
             double term = 0.;
             for (size_t j = 0; j < InDim; ++j) {
-                term += mat.at(i).at(j) * in_vec.at(j);
+                term += mat[i][j] * in_vec[j];
             }
             out_vec.at(i) = term;
         }
@@ -63,24 +85,17 @@ public:
     }
 
     template <typename... Args>
-        requires(sizeof...(Args) == InDim) && (std::same_as<double, Args> && ...)
+        requires(sizeof...(Args) == InDim) && (std::convertible_to<double, Args> && ...)
     constexpr Vector<OutDim> operator()(Args... in_vec) const noexcept {
-        Vector<OutDim> out_vec;
-        for (std::size_t i = 0; auto& row : mat) {
-            out_vec[i++] = [&]<std::size_t... Is>(std::index_sequence<Is...>) {
-                return ((mat[i][Is] * in_vec) + ... + 0.0);
-            }(std::make_index_sequence<InDim>());
-        }
-        return out_vec;
+        return this->operator()(Vector<InDim> { static_cast<double>(in_vec)... });
     }
 
     friend constexpr LinearApp operator+(LinearApp const& lhs, LinearApp const& rhs) noexcept {
         LinearApp new_app = lhs;
-        for (std::size_t i = 0; auto& vec : rhs.mat) {
-            for (std::size_t j = 0; auto val : vec) {
-                new_app.mat[i][j++] += val;
+        for (std::size_t i = 0; i < OutDim; ++i) {
+            for (std::size_t j = 0; j < InDim; ++j) {
+                new_app.mat[i][j] += rhs.mat[i][j];
             }
-            i++;
         }
         return new_app;
     }
@@ -101,9 +116,9 @@ public:
 
     friend constexpr LinearApp operator*(double coef, LinearApp const& app) noexcept {
         LinearApp new_app;
-        for (std::size_t i = 0; auto& vec : app.mat) {
-            for (std::size_t j = 0; auto val : vec) {
-                new_app.mat[i++][j++] = coef * val;
+        for (std::size_t i = 0; i < OutDim; ++i) {
+            for (std::size_t j = 0; j < InDim; ++j) {
+                new_app.mat[i][j] = coef * app.mat[i][j];
             }
         }
         return new_app;
@@ -114,13 +129,13 @@ public:
     }
 
     friend constexpr LinearApp operator/(LinearApp const& app, double coef) noexcept {
-        return (1/coef) * app;
+        return (1 / coef) * app;
     }
 };
 
 export template <std::size_t FirstSize, std::size_t SecondSize, size_t RetSize = std::max(FirstSize, SecondSize)>
 constexpr LinearApp<RetSize, 1> operator+(LinearApp<FirstSize, 1> const& lhs, LinearApp<SecondSize, 1> const& rhs) noexcept {
-    return [=]<std::size_t... Is>(std::index_sequence<Is...>) {
+    return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
         return LinearApp<RetSize, 1> { { { (
             (Is < FirstSize ? lhs.mat[0][Is] : 0.0) +
             (Is < SecondSize ? rhs.mat[0][Is] : 0.0))... } } };
@@ -129,13 +144,12 @@ constexpr LinearApp<RetSize, 1> operator+(LinearApp<FirstSize, 1> const& lhs, Li
 
 export template <std::size_t FirstSize, std::size_t SecondSize, size_t RetSize = std::max(FirstSize, SecondSize)>
 constexpr LinearApp<RetSize, 1> operator-(LinearApp<FirstSize, 1> const& lhs, LinearApp<SecondSize, 1> const& rhs) noexcept {
-    return [=]<std::size_t... Is>(std::index_sequence<Is...>) {
+    return [&]<std::size_t... Is>(std::index_sequence<Is...>) {
         return LinearApp<RetSize, 1> { { { (
             (Is < FirstSize ? lhs.mat[0][Is] : 0.0) -
             (Is < SecondSize ? rhs.mat[0][Is] : 0.0))... } } };
     }(std::make_index_sequence<RetSize>());
 }
-
 
 export inline constexpr LinearApp X = LinearApp<1, 1>::with_last(1.0);
 export inline constexpr LinearApp Y = LinearApp<2, 1>::with_last(1.0);
@@ -148,7 +162,7 @@ struct std::formatter<LinearApp<InDim, OutDim>> {
         return ctx.begin();
     }
 
-    auto format(LinearApp<InDim, OutDim> const& app, std::format_context& ctx) const {
+    constexpr auto format(LinearApp<InDim, OutDim> const& app, std::format_context& ctx) const {
         std::string result = std::format("LinearApp : {} -> {}\n", InDim, OutDim);
         for (size_t i = 0; i < OutDim; ++i) {
             if (OutDim == 1) {
